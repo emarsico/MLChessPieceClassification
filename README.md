@@ -1,2 +1,2 @@
 # MLFruitClassification
-Machine Learning Fruit Classification, using CNN and Transformer
+Machine Learning Chess Piece Classification, using CNN and Transformer
