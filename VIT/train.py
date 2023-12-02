@@ -1,4 +1,3 @@
-
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -11,26 +10,7 @@ from patchify import patchify
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, CSVLogger, ReduceLROnPlateau, EarlyStopping
 from vit import ViT
-
-""" Hyperparameters """
-hp = {}
-hp["image_size"] = 200
-hp["num_channels"] = 3
-hp["patch_size"] = 25
-hp["num_patches"] = (hp["image_size"]**2) // (hp["patch_size"]**2)
-hp["flat_patches_shape"] = (hp["num_patches"], hp["patch_size"]*hp["patch_size"]*hp["num_channels"])
-
-hp["batch_size"] = 16
-hp["lr"] = 1e-4
-hp["num_epochs"] = 100
-hp["num_classes"] = 5
-hp["class_names"] = ["bishop", "knight", "pawn", "queen", "rook"]
-
-hp["num_layers"] = 12
-hp["hidden_dim"] = 768
-hp["mlp_dim"] = 3072
-hp["num_heads"] = 12
-hp["dropout_rate"] = 0.1
+from hyperparameters import hp
 
 def create_dir(path):
     if not os.path.exists(path):
@@ -38,11 +18,6 @@ def create_dir(path):
 
 def load_data(path, split=0.1):
     images = shuffle(glob(os.path.join(path, "*", "*.jpg")))
-    print(f"Loading images from: {os.path.join(path, '*', '*.jpg')}")
-    print(f"Found {len(images)} images")
-
-    if len(images) == 0:
-        raise ValueError("No images found. Check the path and file extensions.")
 
     split_size = int(len(images) * split)
     train_x, valid_x = train_test_split(images, test_size=split_size, random_state=42)
@@ -61,15 +36,11 @@ def process_image_label(path):
     patch_shape = (hp["patch_size"], hp["patch_size"], hp["num_channels"])
     patches = patchify(image, patch_shape, hp["patch_size"])
 
-    # patches = np.reshape(patches, (64, 25, 25, 3))
-    # for i in range(64):
-    #     cv2.imwrite(f"files/{i}.png", patches[i])
-
     patches = np.reshape(patches, hp["flat_patches_shape"])
     patches = patches.astype(np.float32)
 
     """ Label """
-    class_name = path.split(os.sep)[-2]
+    class_name = path.split("\\")[-2]
     class_idx = hp["class_names"].index(class_name)
     class_idx = np.array(class_idx, dtype=np.int32)
 
@@ -84,11 +55,10 @@ def parse(path):
 
     return patches, labels
 
-def tf_dataset(images, batch=32):
+def tf_dataset(images, batch):
     ds = tf.data.Dataset.from_tensor_slices((images))
     ds = ds.map(parse).batch(batch).prefetch(8)
     return ds
-
 
 if __name__ == "__main__":
     """ Seeding """
@@ -99,7 +69,6 @@ if __name__ == "__main__":
     create_dir("files")
 
     """ Paths """
-    print(f"Current Working Directory: {os.getcwd()}")
     dataset_path = "input"
     model_path = os.path.join("files", "model.h5")
     csv_path = os.path.join("files", "log.csv")
@@ -132,5 +101,3 @@ if __name__ == "__main__":
         validation_data=valid_ds,
         callbacks=callbacks
     )
-
-    ## ...
